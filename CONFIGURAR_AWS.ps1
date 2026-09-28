@@ -93,7 +93,7 @@ switch ($Action) {
     Approve {
         if (!$Build) { throw 'Informe -Build com o numero exato da execucao a aprovar.' }
         Invoke-WebRequest -UseBasicParsing -PreserveAuthorizationOnRedirect -Uri "$job/$Build/input/Promover/proceedEmpty" -Method Post -Headers $headers -WebSession $session | Out-Null
-        Write-Host "Aprovacao registrada como admin na execucao $Build, sob autorizacao do usuario."
+        Write-Host "Aprovacao registrada como admin na execucao $Build."
     }
     Collect {
         if (!$Build) { throw 'Informe -Build para coletar a execucao real.' }

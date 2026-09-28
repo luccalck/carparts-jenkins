@@ -2,7 +2,7 @@
 
 Projeto de laboratório de DevOps, 2ADS. Lucca Castilho Costa, RA 26179873.
 
-API Node.js com dados fictícios, pipeline Jenkins e publicação no Amazon ECR/EC2. A adaptação AWS foi aceita pelo professor, conforme informado pelo aluno. Não utiliza dados do ERP.
+API Node.js com dados fictícios, pipeline Jenkins e publicação no Amazon ECR/EC2. Não utiliza dados do ERP.
 
 ## Organização
 
