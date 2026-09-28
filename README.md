@@ -50,6 +50,10 @@ Execute `pwsh -File CONFIGURAR_AWS.ps1` para criar o job. Primeiro execute com `
 
 Credenciais expiradas interrompem o pipeline. Atualize os três valores no cofre antes de nova execução. Não inclua `.env`, chaves `.pem`, caches de plugins ou configurações Docker de autenticação na entrega.
 
+A identidade `release-manager` pode usar credenciais somente nos jobs da pasta `carparts-release`. A CI de branches e PRs roda como `ci-user` e não recebe os segredos AWS. O deploy remoto usa o LabRole da instância, sem transmitir chaves no comando SSM.
+
+Se uma credencial for compartilhada em chat ou captura, trate-a como exposta. Substitua os valores temporários e consulte o administrador do laboratório para revogação; terminar uma sessão não deve ser tomado como garantia de revogação imediata.
+
 ## Limites do laboratório
 
 Homologação e produção são dois containers na mesma EC2, portas 3000/3001. Não representam isolamento empresarial. HTTP é usado somente para dados fictícios com origem restrita; uso real exigiria TLS e arquitetura própria.
