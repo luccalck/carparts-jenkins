@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="620" viewBox="0 0 1080 620">
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#526579"/></marker></defs>
+<rect width="1080" height="620" fill="#ffffff"/>
+<g font-family="Arial,sans-serif" fill="#183249">
+<text x="35" y="42" font-size="24" font-weight="bold">Carparts | Jenkins local e AWS</text>
+<text x="35" y="68" font-size="14">Laboratório sem dados do ERP. O diagrama não é uma captura de execução.</text>
+<rect x="30" y="100" width="680" height="465" rx="12" fill="#f3f6f9" stroke="#b8c8d5"/>
+<text x="50" y="125" font-size="17" font-weight="bold">Estação local | Docker Linux | Windows/WSL 2 ou Ubuntu</text>
+<rect x="60" y="155" width="230" height="100" rx="9" fill="#e1eef6" stroke="#7093ae"/>
+<text x="77" y="181" font-size="17" font-weight="bold">Controller Jenkins</text>
+<text x="77" y="207" font-size="14">Java 21 | 0 executores</text>
+<text x="77" y="230" font-size="14">127.0.0.1:8082 | login</text>
+<rect x="400" y="155" width="270" height="80" rx="9" fill="#ffffff" stroke="#7093ae"/>
+<text x="420" y="184" font-size="16">quality-1 | Linux | 1 executor</text>
+<text x="420" y="208" font-size="14">Rótulos: linux, quality, lint</text>
+<rect x="400" y="255" width="270" height="80" rx="9" fill="#ffffff" stroke="#7093ae"/>
+<text x="420" y="284" font-size="16">quality-2 | Linux | 1 executor</text>
+<text x="420" y="308" font-size="14">Rótulos: linux, quality, test</text>
+<rect x="400" y="355" width="270" height="80" rx="9" fill="#e5f2ea" stroke="#68967d"/>
+<text x="420" y="384" font-size="16">release | Linux | 1 executor</text>
+<text x="420" y="408" font-size="14">Release | Docker + AWS CLI</text>
+<rect x="400" y="465" width="270" height="65" rx="9" fill="#ffffff" stroke="#68967d"/>
+<text x="420" y="490" font-size="16">dind isolado | TLS 2376</text>
+<text x="420" y="513" font-size="13">Sem Docker socket do host</text>
+<rect x="60" y="375" width="230" height="110" rx="9" fill="#ffffff" stroke="#7093ae"/>
+<text x="77" y="402" font-size="16">Relay HMAC | porta 8083</text>
+<text x="77" y="429" font-size="14">Somente /github-webhook/</text>
+<text x="77" y="452" font-size="14">HTTPS por endpoint restrito</text>
+<rect x="765" y="150" width="270" height="100" rx="9" fill="#f3f6f9" stroke="#7093ae"/>
+<text x="785" y="179" font-size="18" font-weight="bold">GitHub</text>
+<text x="785" y="205" font-size="14">PR + check + main protegida</text>
+<text x="785" y="230" font-size="14">Webhook HTTPS/443 assinado</text>
+<rect x="765" y="310" width="270" height="195" rx="9" fill="#e1eef6" stroke="#7093ae"/>
+<text x="785" y="342" font-size="18" font-weight="bold">AWS | us-east-1</text>
+<text x="785" y="375" font-size="15">ECR privado: imagem por digest</text>
+<text x="785" y="405" font-size="15">EC2: homologação / produção</text>
+<text x="785" y="435" font-size="15">Aprovação → produção lab</text>
+<text x="785" y="466" font-size="14">LabRole | Docker 3000 / 3001</text>
+<text x="785" y="490" font-size="14">ECR + SSM HTTPS/443</text>
+<text x="35" y="594" font-size="14">Agents usam WebSocket interno. Nenhum build no controller. Produção lab promove o mesmo digest.</text>
+</g>
+<g stroke="#526579" stroke-width="2" fill="none" marker-end="url(#arrow)">
+<path d="M290 190H400"/><path d="M290 215H340V290H400"/><path d="M290 235H320V390H400"/>
+<path d="M175 375V255"/><path d="M535 435V465"/><path d="M765 200H725V430H290"/>
+<path d="M670 395H765"/>
+</g>
+</svg>

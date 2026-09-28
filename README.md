@@ -58,7 +58,7 @@ Se uma credencial for compartilhada em chat ou captura, trate-a como exposta. Su
 
 Homologação e produção são dois containers na mesma EC2, portas 3000/3001. Não representam isolamento empresarial. HTTP é usado somente para dados fictícios com origem restrita; uso real exigiria TLS e arquitetura própria.
 
-O job local `validacao-local` não publica na nuvem. Prints, execuções e métricas devem corresponder a resultados reais. Webhook GitHub não alcança localhost: use polling enquanto não houver endpoint seguro de webhook. Não exponha o Jenkins apenas para permitir webhook.
+O job local `validacao-local` não publica na nuvem. Prints, execuções e métricas correspondem a resultados reais. O webhook usa um relay que valida assinatura HMAC e o repositório antes de encaminhar ao Jenkins interno. O túnel temporário Cloudflare publica somente esse endpoint, não a interface do Jenkins. Seu endereço muda ao recriar o túnel; atualize o webhook nessa situação. O polling permanece como alternativa.
 
 ## Testes adicionais
 

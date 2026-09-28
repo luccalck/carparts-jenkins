@@ -32,8 +32,9 @@ export function createRelay({ secret, repository, upstream = 'http://127.0.0.1:8
   });
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const relay = createRelay({ secret: process.env.WEBHOOK_SECRET, repository: process.env.GITHUB_REPOSITORY });
+  const relay = createRelay({ secret: process.env.WEBHOOK_SECRET, repository: process.env.GITHUB_REPOSITORY,
+    upstream: process.env.JENKINS_WEBHOOK_URL || 'http://127.0.0.1:8082/github-webhook/' });
   relay.requestTimeout = 15000;
-  relay.listen(8083, '127.0.0.1', () => console.log('Relay local em 127.0.0.1:8083. Nenhuma interface Jenkins exposta.'));
+  relay.listen(8083, process.env.RELAY_BIND || '127.0.0.1', () => console.log('Relay de webhook ativo. Nenhuma interface Jenkins exposta.'));
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => relay.close());
 }

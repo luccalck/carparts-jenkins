@@ -97,6 +97,7 @@ pipeline {
           env.RELEASE_COMMIT = sh(script: "python3 -c 'import json; print(json.load(open(\".release/rollback-info.json\"))[\"commit\"])'", returnStdout: true).trim()
         }
       }
+      post { always { archiveArtifacts artifacts: '.release/rollback-info.json,.release/image.txt', allowEmptyArchive: true } }
     }
     stage('Aprovação registrada') {
       when { expression { !params.PREFLIGHT_ONLY } }
