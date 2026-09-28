@@ -5,6 +5,7 @@ services:
     ports:
       - "127.0.0.1:8082:8080"
     environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false -Dcom.cloudbees.plugins.credentials.UseItemPermission=true"
       JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?Defina a senha em .env}
       JENKINS_CI_PASSWORD: ${JENKINS_CI_PASSWORD:?Defina a senha em .env}
       JENKINS_RELEASE_PASSWORD: ${JENKINS_RELEASE_PASSWORD:?Defina a senha em .env}

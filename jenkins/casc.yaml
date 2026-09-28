@@ -36,7 +36,7 @@ jenkins:
               - user: ci-user
           - name: release
             pattern: "carparts-release($|/.*)"
-            permissions: ["Job/Read", "Job/Build", "Job/Cancel", "Job/Workspace"]
+            permissions: ["Job/Read", "Job/Build", "Job/Cancel", "Job/Workspace", "Credentials/UseItem"]
             entries:
               - user: release-manager
         agents:
