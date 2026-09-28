@@ -1,0 +1,12 @@
+{
+  "executions": 10,
+  "deployments": 10,
+  "observation_days": 0.013832013888888888,
+  "lead_time_median_days": 0.0031886574074074074,
+  "baseline_days": 11,
+  "target_days": 2,
+  "reduction_percent": 99.9710122053872,
+  "deployments_per_day": 722.96052334309,
+  "change_failure_percent": 0,
+  "warning": "Amostra de laboratório não comprova a meta da equipe durante dois meses."
+}

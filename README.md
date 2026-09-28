@@ -54,6 +54,14 @@ A identidade `release-manager` pode usar credenciais somente nos jobs da pasta `
 
 Se uma credencial for compartilhada em chat ou captura, trate-a como exposta. Substitua os valores temporários e consulte o administrador do laboratório para revogação; terminar uma sessão não deve ser tomado como garantia de revogação imediata.
 
+## GitHub e webhook
+
+Repositório: https://github.com/luccalck/carparts-jenkins
+
+Com GitHub CLI autenticada e os serviços Jenkins ativos, execute `pwsh -File CONFIGURAR_WEBHOOK.ps1`. O script gera o segredo em memória, inicia relay e túnel e cadastra o webhook. Não imprime nem grava o segredo em arquivo. O segredo permanece na configuração do container: acesso administrativo ao Docker deve ser restrito. Não exporte a inspeção completa desses containers.
+
+Main exige PR, uma aprovação e o check `testes`. Administradores ainda podem realizar exceções; isso não equivale a revisão independente. Actions e Jenkins são verificações distintas. Não há token GitHub amplo injetado nos pipelines de PR. `pwsh -File PUBLICAR_STATUS_CI.ps1 -WatchSeconds 300` acompanha resultados reais e publica o status Jenkins/CI pela sessão local do GitHub CLI. O processo encerra após cinco minutos; não é callback nativo permanente. Para uso contínuo, configure uma GitHub App de escopo restrito.
+
 ## Limites do laboratório
 
 Homologação e produção são dois containers na mesma EC2, portas 3000/3001. Não representam isolamento empresarial. HTTP é usado somente para dados fictícios com origem restrita; uso real exigiria TLS e arquitetura própria.
