@@ -1,0 +1,36 @@
+// Validacao local. Nao substitui ACR, Azure, webhook ou deploy em nuvem.
+pipeline {
+  agent none
+  options { timestamps(); timeout(time: 15, unit: 'MINUTES'); disableConcurrentBuilds() }
+  stages {
+    stage('Qualidade') {
+      agent { label 'quality' }
+      steps {
+        sh 'cp -R /home/jenkins/lab-src/. . && mkdir -p reports && npm ci && npm run lint && npm run test:ci'
+      }
+      post { always { junit 'reports/tests.xml' } }
+    }
+    stage('Imagem e smoke local') {
+      agent { label 'release' }
+      steps {
+        sh '''
+          cp -R /home/jenkins/lab-src/. .
+          docker build --build-arg COMMIT_SHA=validacao-local -t carparts-validacao:local .
+          docker run --rm carparts-validacao:local node -e '
+            const { spawn } = require("node:child_process");
+            const proc = spawn("node", ["src/server.mjs"], { stdio: "inherit" });
+            setTimeout(async () => {
+              try {
+                const response = await fetch("http://127.0.0.1:3000/health");
+                const body = await response.json();
+                if (!response.ok || body.status !== "ok" || body.commit !== "validacao-local") throw Error("Smoke falhou");
+                console.log("SMOKE LOCAL OK: HTTP 200 e revisao correta");
+                proc.kill(); process.exit(0);
+              } catch (error) { console.error(error.message); proc.kill(); process.exit(1); }
+            }, 2000);
+          '
+        '''
+      }
+    }
+  }
+}

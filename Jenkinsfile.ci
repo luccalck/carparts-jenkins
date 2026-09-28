@@ -1,0 +1,24 @@
+// Multibranch sem credenciais de nuvem. Executar como ci-user (Authorize Project).
+pipeline {
+  agent none
+  options { timestamps(); timeout(time: 15, unit: 'MINUTES'); buildDiscarder(logRotator(numToKeepStr: '30')) }
+  stages {
+    stage('Qualidade') {
+      parallel {
+        stage('Sintaxe') {
+          agent { label 'lint' }
+          steps { checkout scm; sh 'npm ci --ignore-scripts && npm run lint' }
+        }
+        stage('Testes') {
+          agent { label 'test' }
+          steps { checkout scm; sh 'npm ci --ignore-scripts && mkdir -p reports && npm run test:ci' }
+          post { always { junit testResults: 'reports/tests.xml', allowEmptyResults: false } }
+        }
+      }
+    }
+  }
+  post {
+    success { echo 'CI aprovada. Publicação depende do job confiável de release e revisão da main.' }
+    failure { echo 'CI reprovada. Corrigir o PR antes de mesclar.' }
+  }
+}

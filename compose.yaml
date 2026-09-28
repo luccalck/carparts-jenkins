@@ -1,0 +1,78 @@
+name: carparts-jenkins
+services:
+  controller:
+    build: ./jenkins
+    ports:
+      - "127.0.0.1:8082:8080"
+    environment:
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?Defina a senha em .env}
+      JENKINS_CI_PASSWORD: ${JENKINS_CI_PASSWORD:?Defina a senha em .env}
+      JENKINS_RELEASE_PASSWORD: ${JENKINS_RELEASE_PASSWORD:?Defina a senha em .env}
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - ./jenkins/casc.yaml:/var/jenkins_home/casc.yaml:ro
+    networks: [ci]
+    restart: unless-stopped
+  quality-1:
+    profiles: [agents]
+    build:
+      context: ./jenkins
+      dockerfile: agent.Dockerfile
+    environment:
+      JENKINS_URL: http://controller:8080
+      JENKINS_AGENT_NAME: quality-1
+      JENKINS_SECRET: ${QUALITY1_SECRET:-not-configured}
+      JENKINS_WEB_SOCKET: "true"
+      JENKINS_AGENT_WORKDIR: /home/jenkins/agent
+    networks: [ci]
+    depends_on: [controller]
+  quality-2:
+    profiles: [agents]
+    build:
+      context: ./jenkins
+      dockerfile: agent.Dockerfile
+    environment:
+      JENKINS_URL: http://controller:8080
+      JENKINS_AGENT_NAME: quality-2
+      JENKINS_SECRET: ${QUALITY2_SECRET:-not-configured}
+      JENKINS_WEB_SOCKET: "true"
+      JENKINS_AGENT_WORKDIR: /home/jenkins/agent
+    networks: [ci]
+    depends_on: [controller]
+  docker-daemon:
+    profiles: [agents]
+    image: docker:29-dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      - docker-certs:/certs/client
+      - docker-data:/var/lib/docker
+    networks:
+      release:
+        aliases: [docker]
+  release:
+    profiles: [agents]
+    build:
+      context: ./jenkins
+      dockerfile: agent.Dockerfile
+    environment:
+      JENKINS_URL: http://controller:8080
+      JENKINS_AGENT_NAME: release
+      JENKINS_SECRET: ${RELEASE_SECRET:-not-configured}
+      JENKINS_WEB_SOCKET: "true"
+      JENKINS_AGENT_WORKDIR: /home/jenkins/agent
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+    volumes:
+      - docker-certs:/certs/client:ro
+    networks: [ci, release]
+    depends_on: [controller, docker-daemon]
+networks:
+  ci:
+  release:
+volumes:
+  jenkins-home:
+  docker-certs:
+  docker-data:

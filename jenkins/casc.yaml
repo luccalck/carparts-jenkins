@@ -1,0 +1,101 @@
+jenkins:
+  systemMessage: "Carparts | laboratório | controller sem builds"
+  numExecutors: 0
+  mode: EXCLUSIVE
+  projectNamingStrategy:
+    roleBased:
+      forceExistingJobs: false
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: "${JENKINS_ADMIN_PASSWORD}"
+        - id: ci-user
+          password: "${JENKINS_CI_PASSWORD}"
+        - id: release-manager
+          password: "${JENKINS_RELEASE_PASSWORD}"
+  authorizationStrategy:
+    roleBased:
+      roles:
+        global:
+          - name: admin
+            permissions: ["Overall/Administer"]
+            entries:
+              - user: admin
+          - name: users
+            permissions: ["Overall/Read"]
+            entries:
+              - user: ci-user
+              - user: release-manager
+        items:
+          - name: ci
+            pattern: "carparts-ci($|/.*)"
+            permissions: ["Job/Read", "Job/Build", "Job/Cancel", "Job/Workspace"]
+            entries:
+              - user: ci-user
+          - name: release
+            pattern: "carparts-release($|/.*)"
+            permissions: ["Job/Read", "Job/Build", "Job/Cancel", "Job/Workspace"]
+            entries:
+              - user: release-manager
+        agents:
+          - name: quality
+            pattern: "quality-.*"
+            permissions: ["Agent/Build"]
+            entries:
+              - user: ci-user
+              - user: release-manager
+          - name: release
+            pattern: "release"
+            permissions: ["Agent/Build"]
+            entries:
+              - user: release-manager
+  nodes:
+    - permanent:
+        name: quality-1
+        remoteFS: /home/jenkins/agent
+        numExecutors: 1
+        mode: EXCLUSIVE
+        labelString: linux quality lint
+        launcher:
+          inbound:
+            webSocket: true
+    - permanent:
+        name: quality-2
+        remoteFS: /home/jenkins/agent
+        numExecutors: 1
+        mode: EXCLUSIVE
+        labelString: linux quality test
+        launcher:
+          inbound:
+            webSocket: true
+    - permanent:
+        name: release
+        remoteFS: /home/jenkins/agent
+        numExecutors: 1
+        mode: EXCLUSIVE
+        labelString: linux release docker azure
+        launcher:
+          inbound:
+            webSocket: true
+security:
+  contentSecurityPolicy:
+    enforce: true
+  queueItemAuthenticator:
+    authenticators:
+      - project:
+          disabledStrategies:
+            - "org.jenkinsci.plugins.authorizeproject.strategy.SystemAuthorizationStrategy"
+            - "org.jenkinsci.plugins.authorizeproject.strategy.TriggeringUsersAuthorizationStrategy"
+          enabledStrategies:
+            - "org.jenkinsci.plugins.authorizeproject.strategy.SpecificUsersAuthorizationStrategy"
+            - "org.jenkinsci.plugins.authorizeproject.strategy.AnonymousAuthorizationStrategy"
+      - global:
+          strategy:
+            specificUsersAuthorizationStrategy:
+              dontRestrictJobConfiguration: false
+              userid: ci-user
+unclassified:
+  location:
+    url: http://localhost:8082/

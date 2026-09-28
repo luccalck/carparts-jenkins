@@ -1,0 +1,14 @@
+{
+  "name": "carparts-jenkins-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:ci": "node --test --test-reporter=junit --test-reporter-destination=reports/tests.xml test/*.test.mjs",
+    "lint": "node --check src/server.mjs && node --check scripts/metrics.mjs && node --check scripts/smoke.mjs && node --check tools/webhook-relay.mjs",
+    "metrics": "node scripts/metrics.mjs metrics/runs.csv"
+  }
+}

@@ -1,0 +1,129 @@
+// Release confiável da main; segredos somente no cofre da pasta carparts-release.
+pipeline {
+  agent none
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    timeout(time: 60, unit: 'MINUTES')
+    buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '30'))
+    skipDefaultCheckout(true)
+  }
+  parameters {
+    booleanParam(name: 'PREFLIGHT_ONLY', defaultValue: false, description: 'Verificar acesso sem publicar')
+    booleanParam(name: 'ROLLBACK', defaultValue: false, description: 'Restaurar produção anterior com aprovação')
+  }
+  environment {
+    AWS_REGION = 'us-east-1'
+    ECR_URI = '667230721680.dkr.ecr.us-east-1.amazonaws.com/carparts-api'
+    EC2_INSTANCE_ID = 'i-0530d8af368032276'
+    AWS_PAGER = ''
+    PATH = "/opt/aws-cli/bin:${env.PATH}"
+  }
+  stages {
+    stage('Fonte revisada') {
+      agent { label 'lint' }
+      steps {
+        checkout scm
+        script {
+          env.RELEASE_COMMIT = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+          env.COMMIT_AT = sh(script: 'git show -s --format=%cI HEAD', returnStdout: true).trim()
+        }
+        stash name: 'aws-source', includes: '**/*', excludes: '.git/**,.env*,node_modules/**,reports/**,.release/**,secrets/**,**/__pycache__/**'
+      }
+    }
+    stage('Qualidade') {
+      parallel {
+        stage('Sintaxe e segurança AWS') {
+          agent { label 'lint' }
+          steps {
+            deleteDir(); unstash 'aws-source'
+            sh 'npm ci --ignore-scripts && npm run lint && python3 -m unittest discover -s test -p "test_aws*.py"'
+          }
+        }
+        stage('Testes API e métricas') {
+          agent { label 'test' }
+          steps { deleteDir(); unstash 'aws-source'; sh 'npm ci --ignore-scripts && mkdir -p reports && npm run test:ci' }
+          post { always { junit testResults: 'reports/tests.xml', allowEmptyResults: false } }
+        }
+      }
+    }
+    stage('Acesso AWS') {
+      agent { label 'release' }
+      steps {
+        deleteDir(); unstash 'aws-source'
+        withCredentials([
+          string(credentialsId: 'aws-lab-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-lab-secret-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+          string(credentialsId: 'aws-lab-session-token', variable: 'AWS_SESSION_TOKEN')
+        ]) { sh 'set +x; python3 scripts/aws-release.py preflight' }
+      }
+    }
+    stage('Publicação ECR') {
+      when { expression { !params.PREFLIGHT_ONLY && !params.ROLLBACK } }
+      agent { label 'release' }
+      steps {
+        withCredentials([
+          string(credentialsId: 'aws-lab-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-lab-secret-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+          string(credentialsId: 'aws-lab-session-token', variable: 'AWS_SESSION_TOKEN')
+        ]) { sh 'set +x; python3 scripts/aws-release.py publish' }
+        archiveArtifacts artifacts: '.release/image.txt', fingerprint: true
+      }
+    }
+    stage('Homologação e smoke') {
+      when { expression { !params.PREFLIGHT_ONLY && !params.ROLLBACK } }
+      agent { label 'release' }
+      steps {
+        withCredentials([
+          string(credentialsId: 'aws-lab-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-lab-secret-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+          string(credentialsId: 'aws-lab-session-token', variable: 'AWS_SESSION_TOKEN')
+        ]) { sh 'set +x; python3 scripts/aws-release.py homolog' }
+        script { env.IMAGE_REF = readFile('.release/image.txt').trim() }
+      }
+      post { always { archiveArtifacts artifacts: '.release/*.json,.release/*.txt', allowEmptyArchive: true } }
+    }
+    stage('Preparar rollback') {
+      when { expression { !params.PREFLIGHT_ONLY && params.ROLLBACK } }
+      agent { label 'release' }
+      steps {
+        // O remoto seleciona a revisão anterior real. Este digest valida o escopo.
+        sh 'mkdir -p .release; printf "%s@sha256:%064d\\n" "$ECR_URI" 0 > .release/image.txt'
+        script { env.IMAGE_REF = 'revisão anterior registrada na EC2' }
+      }
+    }
+    stage('Aprovação registrada') {
+      when { expression { !params.PREFLIGHT_ONLY } }
+      agent none
+      options { timeout(time: 20, unit: 'MINUTES') }
+      steps {
+        script {
+          env.APPROVED_BY = input(id: 'promover', message: "${params.ROLLBACK ? 'Rollback' : 'Promover'}: ${env.IMAGE_REF}", submitter: 'release-manager,admin', submitterParameter: 'APROVADOR').toString()
+          env.APPROVED_AT = new Date().format("yyyy-MM-dd'T'HH:mm:ssXXX")
+          echo "Aprovador: ${env.APPROVED_BY}; horário: ${env.APPROVED_AT}; imagem: ${env.IMAGE_REF}"
+        }
+      }
+    }
+    stage('Produção de laboratório') {
+      when { expression { !params.PREFLIGHT_ONLY } }
+      agent { label 'release' }
+      steps {
+        withCredentials([
+          string(credentialsId: 'aws-lab-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-lab-secret-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+          string(credentialsId: 'aws-lab-session-token', variable: 'AWS_SESSION_TOKEN')
+        ]) {
+          script {
+            if (params.ROLLBACK) { sh 'set +x; python3 scripts/aws-release.py rollback' }
+            else { sh 'set +x; python3 scripts/aws-release.py production' }
+          }
+        }
+      }
+      post { always { archiveArtifacts artifacts: '.release/*.json,.release/*.txt', allowEmptyArchive: true, fingerprint: true } }
+    }
+  }
+  post {
+    success { echo 'Etapas selecionadas concluídas; confira os artefatos e não confunda preflight com deploy.' }
+    unsuccessful { echo 'Execução interrompida. Sem aprovação não há promoção.' }
+  }
+}

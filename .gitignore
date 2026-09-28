@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+node_modules/
+reports/
+*.log
+metrics/result.json
+secrets/
+*.pem
+*.key
+jenkins/.plugin-cache/
+.release/
+__pycache__/
+*.pyc
