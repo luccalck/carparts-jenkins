@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Configure','Start','Status','Approve','Collect')][string]$Action = 'Configure',
+    [ValidateSet('Configure','Start','Status','Approve','Collect','Stop')][string]$Action = 'Configure',
     [switch]$Preflight,
     [switch]$Rollback,
     [int]$Build = 0
@@ -81,8 +81,14 @@ switch ($Action) {
         $state | ConvertTo-Json -Depth 5
         if ($state.lastBuild) {
             $n = $state.lastBuild.number
-            Invoke-RestMethod -Uri "$job/$n/wfapi/describe" -Headers $headers | ConvertTo-Json -Depth 8
+            try { Invoke-RestMethod -Uri "$job/$n/wfapi/describe" -Headers $headers | ConvertTo-Json -Depth 8 }
+            catch { Write-Host "Detalhes das etapas: $job/$n/console" }
         }
+    }
+    Stop {
+        if (!$Build) { throw 'Informe -Build da execucao a interromper.' }
+        Invoke-WebRequest -UseBasicParsing -PreserveAuthorizationOnRedirect -Uri "$job/$Build/stop" -Method Post -Headers $headers -WebSession $session | Out-Null
+        Write-Host "Execucao $Build interrompida."
     }
     Approve {
         if (!$Build) { throw 'Informe -Build com o numero exato da execucao a aprovar.' }

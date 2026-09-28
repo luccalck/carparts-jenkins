@@ -17,7 +17,7 @@ pipeline {
     ECR_URI = '667230721680.dkr.ecr.us-east-1.amazonaws.com/carparts-api'
     EC2_INSTANCE_ID = 'i-0530d8af368032276'
     AWS_PAGER = ''
-    PATH = "/opt/aws-cli/bin:${env.PATH}"
+    PATH = '/opt/aws-cli/bin:/opt/azure-cli/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
   }
   stages {
     stage('Fonte revisada') {
