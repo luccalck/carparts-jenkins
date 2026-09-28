@@ -7,7 +7,7 @@ pipeline {
       parallel {
         stage('Sintaxe') {
           agent { label 'lint' }
-          steps { checkout scm; sh 'npm ci --ignore-scripts && npm run lint' }
+          steps { checkout scm; sh 'npm ci --ignore-scripts && npm run lint && python3 -m unittest discover -s test -p "test_aws*.py"' }
         }
         stage('Testes') {
           agent { label 'test' }

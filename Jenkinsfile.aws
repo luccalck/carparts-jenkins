@@ -87,9 +87,15 @@ pipeline {
       when { expression { !params.PREFLIGHT_ONLY && params.ROLLBACK } }
       agent { label 'release' }
       steps {
-        // O remoto seleciona a revisão anterior real. Este digest valida o escopo.
-        sh 'mkdir -p .release; printf "%s@sha256:%064d\\n" "$ECR_URI" 0 > .release/image.txt'
-        script { env.IMAGE_REF = 'revisão anterior registrada na EC2' }
+        withCredentials([
+          string(credentialsId: 'aws-lab-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-lab-secret-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+          string(credentialsId: 'aws-lab-session-token', variable: 'AWS_SESSION_TOKEN')
+        ]) { sh 'set +x; python3 scripts/aws-release.py rollback-info' }
+        script {
+          env.IMAGE_REF = readFile('.release/image.txt').trim()
+          env.RELEASE_COMMIT = sh(script: "python3 -c 'import json; print(json.load(open(\".release/rollback-info.json\"))[\"commit\"])'", returnStdout: true).trim()
+        }
       }
     }
     stage('Aprovação registrada') {

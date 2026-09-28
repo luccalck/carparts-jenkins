@@ -66,8 +66,9 @@ def preflight():
 def deploy(action):
     if action in ('production', 'rollback'):
         require_approval(os.environ)
-    image = Path('.release/image.txt').read_text().strip()
-    validate_image(image, os.environ['ECR_URI'])
+    image = '' if action == 'rollback-info' else Path('.release/image.txt').read_text().strip()
+    if action != 'rollback-info':
+        validate_image(image, os.environ['ECR_URI'])
     validate_commit(os.environ['RELEASE_COMMIT'])
     payload = dict(action=action, image=image, commit=os.environ['RELEASE_COMMIT'],
                    uri=os.environ['ECR_URI'], region=os.environ['AWS_REGION'])
@@ -100,6 +101,12 @@ def deploy(action):
                       approved_by=os.environ.get('APPROVED_BY'), approved_at=os.environ.get('APPROVED_AT'),
                       instance_id=os.environ['EC2_INSTANCE_ID'], ssm_command_id=command_id)
         Path(f'.release/{action}.json').write_text(json.dumps(record, indent=2))
+        if action == 'rollback-info':
+            validate_image(record['image'], os.environ['ECR_URI'])
+            validate_commit(record['commit'])
+            Path('.release/image.txt').write_text(record['image'] + '\n')
+            print(f'Rollback disponivel: {record["commit"]}, {record["image"]}')
+            return
         print(f'SMOKE OK: HTTP 200, {record["commit"]}, {record["image"]}')
         return
     raise TimeoutError('SSM nao concluiu no prazo; confira o comando antes de executar novamente.')
@@ -132,7 +139,7 @@ def main():
         validate_image(image, os.environ['ECR_URI'])
         Path('.release/image.txt').write_text(image + '\n')
         print('Imagem publicada: ' + image)
-    elif action in ('homolog', 'production', 'rollback'):
+    elif action in ('homolog', 'production', 'rollback', 'rollback-info'):
         deploy(action)
     else:
         raise ValueError('Acao invalida.')

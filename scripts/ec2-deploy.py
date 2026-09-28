@@ -44,9 +44,9 @@ def start(name, port, image):
 def main():
     payload = json.loads(base64.b64decode(sys.argv[1]))
     action, image, commit, uri = (payload[key] for key in ('action', 'image', 'commit', 'uri'))
-    if action not in ('homolog', 'production', 'rollback'):
+    if action not in ('homolog', 'production', 'rollback', 'rollback-info'):
         raise ValueError('Acao invalida')
-    if not re.fullmatch(re.escape(uri) + r'@sha256:[0-9a-f]{64}', image) or not re.fullmatch(r'[0-9a-f]{40}', commit):
+    if (action != 'rollback-info' and not re.fullmatch(re.escape(uri) + r'@sha256:[0-9a-f]{64}', image)) or not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ValueError('Imagem ou commit invalido')
     state_dir = Path('/opt/carparts-lab')
     state_dir.mkdir(mode=0o700, exist_ok=True)
@@ -57,13 +57,18 @@ def main():
     previous = None
     if old:
         previous = {'image': old['Config']['Image'], 'commit': old['Config']['Labels']['org.opencontainers.image.revision']}
-    if action == 'rollback':
+    if action in ('rollback', 'rollback-info'):
         history = json.loads(state_file.read_text())
         if not history.get('previous'):
             raise ValueError('Nao ha versao anterior real para rollback')
-        image, commit = history['previous']['image'], history['previous']['commit']
-        if not re.fullmatch(re.escape(uri) + r'@sha256:[0-9a-f]{64}', image):
+        target_image, target_commit = history['previous']['image'], history['previous']['commit']
+        if not re.fullmatch(re.escape(uri) + r'@sha256:[0-9a-f]{64}', target_image):
             raise ValueError('Digest anterior fora do repositorio autorizado')
+        if action == 'rollback-info':
+            print('CARPARTS_RESULT=' + json.dumps({'image': target_image, 'commit': target_commit, 'action': action}))
+            return
+        if image != target_image or commit != target_commit:
+            raise ValueError('Versao anterior mudou desde a aprovacao: interrompido')
     elif action == 'production':
         homol = json.loads((state_dir / 'carparts-homol.json').read_text())
         if homol['image'] != image or homol['commit'] != commit:
@@ -113,4 +118,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    import fcntl
+    with open('/run/carparts-deploy.lock', 'w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        main()
